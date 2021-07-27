@@ -1,0 +1,15 @@
+= Narayana object store journal load
+
+== How to build
+
+[source,bash]
+----
+mvn clean install
+----
+
+== How to run
+
+[source,bash]
+----
+java -jar target/journal-load-1.0-SNAPSHOT-jar-with-dependencies.jar
+----

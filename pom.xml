@@ -9,26 +9,37 @@
   <version>1.0-SNAPSHOT</version>
 
   <name>journal-load</name>
-  <!-- FIXME change it to the project's website -->
-  <url>http://www.example.com</url>
+  <description>Simple standalone tool app which will load Narayana object store</description>
+  <url>https://github.com/ochaloup/journal-load</url>
+
+  <licenses>
+    <license>
+      <name>LGPL 2.1</name>
+      <url>http://www.gnu.org/licenses/lgpl-2.1.html</url>
+    </license>
+  </licenses>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <maven.compiler.source>1.7</maven.compiler.source>
-    <maven.compiler.target>1.7</maven.compiler.target>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+
+    <checkstyle.skip>false</checkstyle.skip>
+    <version.narayana>5.12.0.Final</version.narayana>
+    <version.io.narayana.checkstyle-config>1.0.1.Final</version.io.narayana.checkstyle-config>
   </properties>
 
   <dependencies>
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.11</version>
-      <scope>test</scope>
+      <groupId>org.jboss.narayana.arjunacore</groupId>
+      <artifactId>arjuna</artifactId>
+      <version>${version.narayana}</version>
     </dependency>
   </dependencies>
 
   <build>
-    <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
+    <!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
+    <pluginManagement>
       <plugins>
         <!-- clean lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#clean_Lifecycle -->
         <plugin>
@@ -69,7 +80,71 @@
           <artifactId>maven-project-info-reports-plugin</artifactId>
           <version>3.0.0</version>
         </plugin>
+        <plugin>
+          <artifactId>maven-checkstyle-plugin</artifactId>
+          <version>3.1.2</version>
+        </plugin>
+        <plugin>
+          <artifactId>maven-assembly-plugin</artifactId>
+          <version>3.3.0</version>
+        </plugin>
       </plugins>
     </pluginManagement>
+
+    <plugins>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <descriptorRefs>
+            <descriptorRef>jar-with-dependencies</descriptorRef>
+          </descriptorRefs>
+          <archive>
+            <manifest>
+              <mainClass>io.narayana.JournalLoad</mainClass>
+            </manifest>
+          </archive>
+        </configuration>
+        <executions>
+          <execution>
+            <id>make-assembly</id> <!-- this is used for inheritance merges -->
+            <phase>package</phase> <!-- bind to the packaging phase -->
+            <goals>
+              <goal>single</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <configuration>
+          <configLocation>narayana-checkstyle/checkstyle.xml</configLocation>
+          <suppressionsLocation>narayana-checkstyle/suppressions.xml</suppressionsLocation>
+          <consoleOutput>true</consoleOutput>
+          <failsOnError>true</failsOnError>
+          <includeTestSourceDirectory>true</includeTestSourceDirectory>
+          <excludes>**/*$logger.java,**/*$bundle.java</excludes>
+          <useFile></useFile>
+          <!-- checkstyle is set to be run on particular modules by disabling skip -->
+          <skip>${checkstyle.skip}</skip>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>io.narayana</groupId>
+            <artifactId>narayana-checkstyle-config</artifactId>
+            <version>${version.io.narayana.checkstyle-config}</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>check-style</id>
+            <goals>
+              <goal>checkstyle</goal>
+            </goals>
+            <phase>compile</phase>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
   </build>
 </project>

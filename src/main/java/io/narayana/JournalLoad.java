@@ -6,6 +6,8 @@ import com.arjuna.ats.arjuna.objectstore.RecoveryStore;
 import com.arjuna.ats.arjuna.objectstore.StoreManager;
 import com.arjuna.ats.arjuna.state.InputObjectState;
 import com.arjuna.ats.internal.arjuna.common.UidHelper;
+import com.arjuna.ats.internal.arjuna.objectstore.hornetq.HornetqJournalEnvironmentBean;
+import com.arjuna.common.internal.util.propertyservice.BeanPopulator;
 
 import java.io.File;
 import java.io.IOException;
@@ -14,15 +16,13 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 /**
  * To load and list content of the Narayana object store journal
  */
 public class JournalLoad {
-    private static final String OBJECT_STORE_DIR_PARAM = "ObjectStoreEnvironmentBean.objectStoreDir";
-    private static final String HORNET_OBJECT_STORE_DIR_PARAM = "HornetqJournalEnvironmentBean.objectStoreDir.storeDir";
-    private static final String OBJECT_STORE_TYPE_PARAM = "ObjectStoreEnvironmentBean.objectStoreType";
-    private static final String HORNETQ_OBJECT_STORE_ADAPTOR = "com.arjuna.ats.internal.arjuna.objectstore.hornetq.HornetqObjectStoreAdaptor";
+    private static final String HORNETQ_OBJECT_STORE_ADAPTOR = com.arjuna.ats.internal.arjuna.objectstore.hornetq.HornetqObjectStoreAdaptor.class.getName();
 
     public static void main(String[] args) {
         if (args.length != 1) {
@@ -33,15 +33,17 @@ public class JournalLoad {
             throw new IllegalStateException("Provided argument of value '" + args[0] + "' is not a path to a directory");
         }
 
-        System.setProperty(OBJECT_STORE_DIR_PARAM, objectStorePath.getAbsolutePath());
-        System.setProperty(HORNET_OBJECT_STORE_DIR_PARAM, objectStorePath.getAbsolutePath());
-        System.setProperty(OBJECT_STORE_TYPE_PARAM, HORNETQ_OBJECT_STORE_ADAPTOR);
+
+        com.arjuna.ats.arjuna.common.arjPropertyManager.getObjectStoreEnvironmentBean().setObjectStoreType(HORNETQ_OBJECT_STORE_ADAPTOR);
+        com.arjuna.ats.arjuna.common.arjPropertyManager.getObjectStoreEnvironmentBean().setObjectStoreDir(objectStorePath.getAbsolutePath());
+        HornetqJournalEnvironmentBean hornetQEnvBean = BeanPopulator.getDefaultInstance(HornetqJournalEnvironmentBean.class);
+        hornetQEnvBean.setStoreDir(objectStorePath.getAbsolutePath());
 
         try {
             StoreManager.getTxLog(); // init log
             RecoveryStore recoveryStore = StoreManager.getRecoveryStore();
-            System.out.println("Reading data:");
-            System.out.println(getIds(recoveryStore, null));
+            System.out.printf("Reading data from store %s:%n", objectStorePath.getAbsolutePath());
+            printIds(recoveryStore, null);
         } finally {
             StoreManager.getTxLog().stop();
         }
@@ -51,9 +53,8 @@ public class JournalLoad {
      * Remove any committed objects from the store.
      *
      * @param recoveryStore Instance of initialized recovery store that will be used to search in.
-     * @param objectTypes The object types that should be removed.
+     * @param objectTypes The object types that should be removed. When null then remove all types.
      * @return The number of objects that were removed.
-     * @throws ObjectStoreException The store implementation was unable to remove a committed object.
      */
     static int clearXids(RecoveryStore recoveryStore, String objectTypes) {
         Objects.requireNonNull(recoveryStore);
@@ -62,10 +63,10 @@ public class JournalLoad {
             throw new IllegalStateException("objectType param for clearing Xids cannot be an empty string");
         }
 
-        Collection<Uid> uids = getIds(recoveryStore, objectTypes);
+        Collection<UidDataHolder> uids = getStoredIds(recoveryStore, objectTypes);
         try {
-            for (Uid uid : uids) {
-                recoveryStore.remove_committed(uid, objectTypes);
+            for (UidDataHolder uidHolder: uids) {
+                recoveryStore.remove_committed(uidHolder.uid, uidHolder.type);
             }
         } catch (ObjectStoreException e) {
             String errMsg = String.format("Error on removing type '%s' from recovery store '%s'. The work could be unfinished as stopped in middle of processing.",
@@ -76,6 +77,16 @@ public class JournalLoad {
         return uids.size();
     }
 
+    static Collection<UidDataHolder> getStoredIds(RecoveryStore recoveryStore, String objectType) {
+        final Collection<UidDataHolder> uids = new ArrayList<>();
+        processIds(recoveryStore, objectType, holder -> uids.add(holder));
+        return uids;
+    }
+
+    static void printIds(RecoveryStore recoveryStore, String objectType) {
+        processIds(recoveryStore, objectType, holder -> System.out.printf("%s, %s%n", holder.uid, holder.type));
+    }
+
     /**
      * Get a list object identifier for a given object type.
      * When object type is {@code null} then return all object types.
@@ -83,11 +94,8 @@ public class JournalLoad {
      * @param recoveryStore instance of initialized recovery store that will be used to search in
      * @param objectType Object types to searched for. It can be a list delimited with comma ('{@code ,}'). When null then any type is returned.
      * @return all objects of the given type
-     * @throws ObjectStoreException the store implementation was unable retrieve all types of objects
      */
-    static Collection<Uid> getIds(RecoveryStore recoveryStore, String objectType) {
-        Collection<Uid> ids = new ArrayList<>();
-
+    static void processIds(RecoveryStore recoveryStore, String objectType, Consumer<UidDataHolder> supplier) {
         List<String> splitObjectTypes = null;
         if(objectType != null) {
             splitObjectTypes = Arrays.asList(objectType.split(","));
@@ -109,7 +117,6 @@ public class JournalLoad {
             try {
                 while (allTypesData.notempty() && !endOfList) {
                     currentTypeName = allTypesData.unpackString();
-                    System.out.println("Type in progress: " + currentTypeName); // TODO: comment me out
 
                     if (currentTypeName.compareTo("") == 0)
                         endOfList = true;
@@ -126,7 +133,7 @@ public class JournalLoad {
                                     if (currentUid.equals(Uid.nullUid())) {
                                         endOfUids = true;
                                     } else {
-                                        ids.add(currentUid);
+                                        supplier.accept(new UidDataHolder(currentTypeName, currentUid));
                                     }
                                 }
                             } catch (IOException ioe) {
@@ -139,6 +146,14 @@ public class JournalLoad {
                 throw new IllegalStateException("Trouble on unpacking data and reading UIDs", outE);
             }
         }
-        return ids;
+    }
+
+    static class UidDataHolder {
+        String type;
+        Uid uid;
+        UidDataHolder(String type, Uid uid) {
+            this.type = type;
+            this.uid = uid;
+        }
     }
 }

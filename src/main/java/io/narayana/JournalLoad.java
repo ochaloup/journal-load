@@ -1,5 +1,6 @@
 package io.narayana;
 
+import com.arjuna.ats.arjuna.AtomicAction;
 import com.arjuna.ats.arjuna.common.Uid;
 import com.arjuna.ats.arjuna.exceptions.ObjectStoreException;
 import com.arjuna.ats.arjuna.objectstore.RecoveryStore;
@@ -84,7 +85,20 @@ public class JournalLoad {
     }
 
     static void printIds(RecoveryStore recoveryStore, String objectType) {
-        processIds(recoveryStore, objectType, holder -> System.out.printf("%s, %s%n", holder.uid, holder.type));
+        processIds(recoveryStore, objectType, holder -> {
+            String aaInfo = null;
+            if (holder.atomicAction != null) {
+                try {
+                    // InputObjectState ios = holder.atomicAction.getStore().read_committed(holder.uid, null);
+                    System.out.println("For uid: " + holder.uid + " of type " + holder.type + "\n" + holder.atomicAction);
+                } catch (Exception ose) { // TODO: remove me?
+                    System.err.println("Trouble on reading participants of uid: " + holder.uid);
+                    ose.printStackTrace(System.err);
+                }
+            } else {
+                System.out.printf("%s, %s%n", holder.uid, holder.type);
+            }
+        });
     }
 
     /**
@@ -124,16 +138,20 @@ public class JournalLoad {
                         if (splitObjectTypes != null && !splitObjectTypes.contains(currentTypeName))
                             continue;
 
-                        InputObjectState uids = new InputObjectState();
-                        if (recoveryStore.allObjUids(currentTypeName, uids)) {
+                        InputObjectState uidObjects = new InputObjectState();
+                        if (recoveryStore.allObjUids(currentTypeName, uidObjects)) {
                             try {
-                                boolean endOfUids = false;
-                                while (!endOfUids) {
-                                    Uid currentUid = UidHelper.unpackFrom(uids);
-                                    if (currentUid.equals(Uid.nullUid())) {
-                                        endOfUids = true;
+                                while (uidObjects.notempty()) {
+                                    Uid uid = UidHelper.unpackFrom(uidObjects);
+                                    if (uid.equals(Uid.nullUid())) {
+                                        break;
+                                    }
+                                    if (currentTypeName.equals("StateManager/BasicAction/TwoPhaseCoordinator/AtomicAction")) {
+                                        AtomicAction aa = new AtomicAction(uid);
+                                        aa.activate();
+                                        supplier.accept(new UidDataHolder(currentTypeName, aa.get_uid(), aa));
                                     } else {
-                                        supplier.accept(new UidDataHolder(currentTypeName, currentUid));
+                                        supplier.accept(new UidDataHolder(currentTypeName, uid));
                                     }
                                 }
                             } catch (IOException ioe) {
@@ -149,11 +167,16 @@ public class JournalLoad {
     }
 
     static class UidDataHolder {
-        String type;
-        Uid uid;
-        UidDataHolder(String type, Uid uid) {
+        final String type;
+        final Uid uid;
+        final AtomicAction atomicAction;
+        UidDataHolder(String type, Uid uid, AtomicAction aa) {
             this.type = type;
             this.uid = uid;
+            this.atomicAction = aa;
+        }
+        UidDataHolder(String type, Uid uid) {
+            this(type, uid, null);
         }
     }
 }

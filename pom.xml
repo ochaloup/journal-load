@@ -37,8 +37,8 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.jboss.narayana.arjunacore</groupId>
-      <artifactId>arjuna</artifactId>
+      <groupId>org.jboss.narayana.jts</groupId>
+      <artifactId>narayana-jts-idlj</artifactId>
       <version>${version.narayana}</version>
     </dependency>
     <!-- dependencies for ActiveMQ journal -->

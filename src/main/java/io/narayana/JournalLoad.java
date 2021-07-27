@@ -1,11 +1,9 @@
 package io.narayana;
 
-import com.arjuna.ats.arjuna.common.ObjectStoreEnvironmentBean;
 import com.arjuna.ats.arjuna.common.Uid;
 import com.arjuna.ats.arjuna.exceptions.ObjectStoreException;
 import com.arjuna.ats.arjuna.objectstore.RecoveryStore;
 import com.arjuna.ats.arjuna.objectstore.StoreManager;
-import com.arjuna.ats.arjuna.objectstore.TxLog;
 import com.arjuna.ats.arjuna.state.InputObjectState;
 import com.arjuna.ats.internal.arjuna.common.UidHelper;
 
@@ -21,12 +19,9 @@ import java.util.Objects;
  * To load and list content of the Narayana object store journal
  */
 public class JournalLoad {
-    private static final String OBJECT_STORE_DIR_PARAM = ObjectStoreEnvironmentBean.class.getSimpleName() + ".objectStoreDir";
-    private static final String OBJECT_STORE_TYPE_PARAM = ObjectStoreEnvironmentBean.class.getSimpleName() + ".objectStoreType";
-    private static final String HORNETQ_OBJECT_STORE_ADAPTOR = com.arjuna.ats.internal.arjuna.objectstore.hornetq.HornetqObjectStoreAdaptor.class.getName();
-
-    // HornetQ/ActiveMQ journal store java dependencies for WFLY 24
-    // $JBOSS_HOME/modules/system/layers/base/org/jboss/jts/main/narayana-jts-idlj-5.12.0.Final.jar:$JBOSS_HOME/modules/system/layers/base/org/jboss/logging/main/jboss-logging-3.4.2.Final.jar:$JBOSS_HOME/modules/system/layers/base/org/apache/activemq/artemis/journal/main/artemis-journal-2.16.0.jar:$JBOSS_HOME/modules/system/layers/base/org/apache/activemq/artemis/journal/main/artemis-commons-2.16.0.jar:$JBOSS_HOME/modules/system/layers/base/org/apache/activemq/artemis/journal/main/activemq-artemis-native-1.0.2.jar:$JBOSS_HOME/modules/system/layers/base/io/netty/main/netty-all-4.1.66.Final.jar
+    private static final String OBJECT_STORE_DIR_PARAM = "ObjectStoreEnvironmentBean.objectStoreDir";
+    private static final String OBJECT_STORE_TYPE_PARAM = "ObjectStoreEnvironmentBean.objectStoreType";
+    private static final String HORNETQ_OBJECT_STORE_ADAPTOR = "com.arjuna.ats.internal.arjuna.objectstore.hornetq.HornetqObjectStoreAdaptor";
 
     public static void main(String[] args) {
         if (args.length != 1) {
@@ -41,8 +36,10 @@ public class JournalLoad {
         System.setProperty(OBJECT_STORE_TYPE_PARAM, HORNETQ_OBJECT_STORE_ADAPTOR);
 
         try {
-            StoreManager.getTxLog().start();
+            StoreManager.getTxLog(); // init log
             RecoveryStore recoveryStore = StoreManager.getRecoveryStore();
+            System.out.println("Reading data:");
+            System.out.println(getIds(recoveryStore, null));
         } finally {
             StoreManager.getTxLog().stop();
         }
@@ -108,8 +105,9 @@ public class JournalLoad {
             boolean endOfList = false;
 
             try {
-                while (!endOfList) {
+                while (allTypesData.notempty() && !endOfList) {
                     currentTypeName = allTypesData.unpackString();
+                    System.out.println("Type in progress: " + currentTypeName); // TODO: comment me out
 
                     if (currentTypeName.compareTo("") == 0)
                         endOfList = true;

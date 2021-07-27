@@ -27,6 +27,12 @@
     <checkstyle.skip>false</checkstyle.skip>
     <version.narayana>5.12.0.Final</version.narayana>
     <version.io.narayana.checkstyle-config>1.0.1.Final</version.io.narayana.checkstyle-config>
+
+    <!-- Versions from WildFly 24 -->
+    <version.jboss.logging>3.4.2.Final</version.jboss.logging>
+    <version.artemis.journal>2.16.0</version.artemis.journal>
+    <version.artemis.native>1.0.2</version.artemis.native>
+    <version.netty>4.1.66.Final</version.netty>
   </properties>
 
   <dependencies>
@@ -34,6 +40,32 @@
       <groupId>org.jboss.narayana.arjunacore</groupId>
       <artifactId>arjuna</artifactId>
       <version>${version.narayana}</version>
+    </dependency>
+    <!-- dependencies for ActiveMQ journal -->
+    <dependency>
+      <groupId>org.jboss.logging</groupId>
+      <artifactId>jboss-logging</artifactId>
+      <version>${version.jboss.logging}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>artemis-journal</artifactId>
+      <version>${version.artemis.journal}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>artemis-commons</artifactId>
+      <version>${version.artemis.journal}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-artemis-native</artifactId>
+      <version>${version.artemis.native}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-all</artifactId>
+      <version>${version.netty}</version>
     </dependency>
   </dependencies>
 

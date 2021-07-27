@@ -20,6 +20,7 @@ import java.util.Objects;
  */
 public class JournalLoad {
     private static final String OBJECT_STORE_DIR_PARAM = "ObjectStoreEnvironmentBean.objectStoreDir";
+    private static final String HORNET_OBJECT_STORE_DIR_PARAM = "HornetqJournalEnvironmentBean.objectStoreDir.storeDir";
     private static final String OBJECT_STORE_TYPE_PARAM = "ObjectStoreEnvironmentBean.objectStoreType";
     private static final String HORNETQ_OBJECT_STORE_ADAPTOR = "com.arjuna.ats.internal.arjuna.objectstore.hornetq.HornetqObjectStoreAdaptor";
 
@@ -27,12 +28,13 @@ public class JournalLoad {
         if (args.length != 1) {
             throw new IllegalStateException("Expecting one argument which is a path to a directory where object store resides");
         }
-        final File objectStore = new File(args[0]);
-        if (!objectStore.isDirectory()) {
+        final File objectStorePath = new File(args[0]);
+        if (!objectStorePath.isDirectory()) {
             throw new IllegalStateException("Provided argument of value '" + args[0] + "' is not a path to a directory");
         }
 
-        System.setProperty(OBJECT_STORE_DIR_PARAM, objectStore.getAbsolutePath());
+        System.setProperty(OBJECT_STORE_DIR_PARAM, objectStorePath.getAbsolutePath());
+        System.setProperty(HORNET_OBJECT_STORE_DIR_PARAM, objectStorePath.getAbsolutePath());
         System.setProperty(OBJECT_STORE_TYPE_PARAM, HORNETQ_OBJECT_STORE_ADAPTOR);
 
         try {

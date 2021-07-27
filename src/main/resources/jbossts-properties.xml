@@ -1,0 +1,5 @@
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+    <entry key="ObjectStoreEnvironmentBean.objectStoreDir">target/objectStore</entry>
+    <entry key="HornetqJournalEnvironmentBean.storeDir">target/hornetObjectStore</entry>
+</properties>

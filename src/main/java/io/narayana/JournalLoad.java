@@ -42,8 +42,14 @@ public class JournalLoad {
 
         com.arjuna.ats.arjuna.common.arjPropertyManager.getObjectStoreEnvironmentBean().setObjectStoreType(HORNETQ_OBJECT_STORE_ADAPTOR);
         com.arjuna.ats.arjuna.common.arjPropertyManager.getObjectStoreEnvironmentBean().setObjectStoreDir(objectStorePath.getAbsolutePath());
+
         HornetqJournalEnvironmentBean hornetQEnvBean = BeanPopulator.getDefaultInstance(HornetqJournalEnvironmentBean.class);
         hornetQEnvBean.setStoreDir(objectStorePath.getAbsolutePath());
+        // hornetQEnvBean.setCompactMinFiles(1);
+        // hornetQEnvBean.setMinFiles(2);
+        // hornetQEnvBean.setCompactPercentage(1);
+
+
         // for some reason the jbossts-properties.xml setup does not work here properly
         com.arjuna.ats.arjuna.common.recoveryPropertyManager.getRecoveryEnvironmentBean().setRecoveryActivatorClassNames(null);
         com.arjuna.ats.arjuna.common.recoveryPropertyManager.getRecoveryEnvironmentBean().setExpiryScannerClassNames(null);
@@ -60,9 +66,8 @@ public class JournalLoad {
 
             RecoveryStore recoveryStore = StoreManager.getRecoveryStore();
             System.out.printf("Reading data from store %s:%n", objectStorePath.getAbsolutePath());
-            // printIds(recoveryStore, null);
-            int i = clearXids(recoveryStore, null);
-            System.out.println("Deleted: " + i);
+            printIds(recoveryStore, null);
+            // System.out.println("Deleted: " + clearXids(recoveryStore, null));
         } finally {
             RecoveryManager.manager().terminate();
             StoreManager.getRecoveryStore().stop();

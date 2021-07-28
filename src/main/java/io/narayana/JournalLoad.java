@@ -47,7 +47,7 @@ public class JournalLoad {
         hornetQEnvBean.setStoreDir(objectStorePath.getAbsolutePath());
         // hornetQEnvBean.setCompactMinFiles(1);
         // hornetQEnvBean.setMinFiles(2);
-        // hornetQEnvBean.setCompactPercentage(1);
+        // hornetQEnvBean.setCompactPercentage(99);
 
 
         // for some reason the jbossts-properties.xml setup does not work here properly
@@ -189,7 +189,7 @@ public class JournalLoad {
         }
     }
 
-    static class UidDataHolder {
+    static final class UidDataHolder {
         final String type;
         final Uid uid;
         final RecoveredTransactionWrapper recoveredTransaction;

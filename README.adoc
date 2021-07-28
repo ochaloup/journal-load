@@ -11,7 +11,8 @@ mvn clean install
 
 [source,bash]
 ----
-java -jar target/journal-load-1.0-SNAPSHOT-jar-with-dependencies.jar <directory>
+java -Djava.util.logging.config.file=src/main/resources/logging.properties \
+  -jar target/journal-load-1.0-SNAPSHOT-jar-with-dependencies.jar <directory>
 ----
 
 To debug

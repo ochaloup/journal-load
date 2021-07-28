@@ -13,6 +13,7 @@ import com.arjuna.common.internal.util.propertyservice.BeanPopulator;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -24,6 +25,7 @@ import java.util.function.Consumer;
  * To load and list content of the Narayana object store journal
  */
 public class JournalLoad {
+    private static final String ATOMIC_ACTION_TYPE_NAME = new AtomicAction().type();
     private static final String HORNETQ_OBJECT_STORE_ADAPTOR = com.arjuna.ats.internal.arjuna.objectstore.hornetq.HornetqObjectStoreAdaptor.class.getName();
 
     public static void main(String[] args) {
@@ -46,8 +48,8 @@ public class JournalLoad {
 
         // to be able to load data about participant records (see com.arjuna.ats.arjuna.coordinator.abstractrecord.RecordTypeManager)
         com.arjuna.ats.internal.jta.Implementations.initialise();
-        // com.arjuna.ats.internal.jts.Implementations.initialise();
-        // com.arjuna.ats.internal.txoj.Implementations.initialise();
+        com.arjuna.ats.internal.jts.Implementations.initialise();
+        com.arjuna.ats.internal.txoj.Implementations.initialise();
 
         try {
             // setup recovery manager to be run only on demand and not as a background thread
@@ -98,14 +100,21 @@ public class JournalLoad {
 
     static void printIds(RecoveryStore recoveryStore, String objectType) {
         processIds(recoveryStore, objectType, holder -> {
-            String aaInfo = null;
             if (holder.atomicAction != null) {
+                AtomicAction aa = holder.atomicAction;
                 try {
                     // InputObjectState ios = holder.atomicAction.getStore().read_committed(holder.uid, null);
-                    System.out.println("For uid: " + holder.uid + " of type " + holder.type + "\n" + holder.atomicAction);
-                } catch (Exception ose) { // TODO: remove me?
-                    System.err.println("Trouble on reading participants of uid: " + holder.uid);
+                    aa.activate();
+                    System.out.println("For uid: " + holder.uid + " of type " + holder.type + ", " + aa);
+                    // reading internal data
+                    Field f = aa.getClass().getField("pendingList");
+                    f.setAccessible(true);
+                    System.out.println(">>>> " + f.get(aa));
+                } catch (Exception ose) {
+                    System.err.println("Trouble on activating AtomicAction of uid: " + holder.uid);
                     ose.printStackTrace(System.err);
+                } finally {
+                    aa.deactivate();
                 }
             } else {
                 System.out.printf("%s, %s%n", holder.uid, holder.type);
@@ -155,14 +164,12 @@ public class JournalLoad {
                             try {
                                 while (uidObjects.notempty()) {
                                     Uid uid = UidHelper.unpackFrom(uidObjects);
-                                    if (uid.equals(Uid.nullUid())) {
+                                    if (uid.equals(Uid.nullUid())) { // no more data for the type
                                         break;
                                     }
-                                    if (currentTypeName.equals("StateManager/BasicAction/TwoPhaseCoordinator/AtomicAction")) {
+                                    if (ATOMIC_ACTION_TYPE_NAME.endsWith(currentTypeName)) {
                                         AtomicAction aa = new AtomicAction(uid);
-                                        aa.activate();
                                         supplier.accept(new UidDataHolder(currentTypeName, aa.get_uid(), aa));
-                                        aa.deactivate();
                                     } else {
                                         supplier.accept(new UidDataHolder(currentTypeName, uid));
                                     }

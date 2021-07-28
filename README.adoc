@@ -11,9 +11,16 @@ mvn clean install
 
 [source,bash]
 ----
-java -Djava.util.logging.config.file=src/main/resources/logging.properties \
-  -jar target/journal-load-1.0-SNAPSHOT-jar-with-dependencies.jar <directory>
+java -cp target/journal-load-1.0-SNAPSHOT-jar-with-dependencies.jar io.narayana.JournalLoad <directory>
 ----
+
+TIP: to stop showing Narayana warning use
++
+[source,bash]
+----
+java -Djava.util.logging.config.file=src/main/resources/logging.properties \
+  java -jar target/journal-load-1.0-SNAPSHOT-jar-with-dependencies.jar <directory>
+---
 
 To debug
 

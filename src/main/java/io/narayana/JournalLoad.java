@@ -1,5 +1,6 @@
 package io.narayana;
 
+import com.arjuna.ats.arjuna.AtomicAction;
 import com.arjuna.ats.arjuna.StateManager;
 import com.arjuna.ats.arjuna.common.Uid;
 import com.arjuna.ats.arjuna.exceptions.ObjectStoreException;
@@ -7,6 +8,8 @@ import com.arjuna.ats.arjuna.objectstore.RecoveryStore;
 import com.arjuna.ats.arjuna.objectstore.StoreManager;
 import com.arjuna.ats.arjuna.recovery.RecoveryManager;
 import com.arjuna.ats.arjuna.state.InputObjectState;
+import com.arjuna.ats.arjuna.tools.osb.mbean.ParticipantStatus;
+import com.arjuna.ats.arjuna.tools.osb.mbean.UidWrapper;
 import com.arjuna.ats.internal.arjuna.common.UidHelper;
 import com.arjuna.ats.internal.arjuna.objectstore.hornetq.HornetqJournalEnvironmentBean;
 import com.arjuna.ats.internal.jta.tools.osb.mbean.jts.RecoveredTransactionWrapper;
@@ -24,6 +27,7 @@ import java.util.function.Consumer;
 /**
  * To load and list content of the Narayana object store journal
  */
+@SuppressWarnings("deprecation")
 public class JournalLoad {
     private static final String STATE_MANAGER_TYPE_NAME = StateManager.class.getSimpleName();
     private static final String HORNETQ_OBJECT_STORE_ADAPTOR = com.arjuna.ats.internal.arjuna.objectstore.hornetq.HornetqObjectStoreAdaptor.class.getName();
@@ -103,13 +107,17 @@ public class JournalLoad {
             if (holder.recoveredTransaction != null) {
                 RecoveredTransactionWrapper recTxn = holder.recoveredTransaction;
                 try {
-                    recTxn.activate();
-                    System.out.println("For uid: " + holder.uid + " of type " + holder.type + ", " + recTxn);
+                    System.out.println("For uid: " + holder.uid + " of type " + holder.type + ", " + recTxn + ", participants:");
+                    System.out.printf("  [%s:%s, %s:%s, %s:%s, %s:%s, %s:%s]%n",
+                            ParticipantStatus.FAILED.name(), recTxn.getRecords(ParticipantStatus.FAILED),
+                            ParticipantStatus.PREPARED.name(), recTxn.getRecords(ParticipantStatus.PREPARED),
+                            ParticipantStatus.HEURISTIC.name(), recTxn.getRecords(ParticipantStatus.HEURISTIC),
+                            ParticipantStatus.PENDING.name(), recTxn.getRecords(ParticipantStatus.PENDING),
+                            ParticipantStatus.READONLY.name(), recTxn.getRecords(ParticipantStatus.READONLY)
+                    );
                 } catch (Exception ose) {
                     System.err.println("Trouble on activating AtomicAction of uid: " + holder.uid);
                     ose.printStackTrace(System.err);
-                } finally {
-                    recTxn.deactivate();
                 }
             } else {
                 System.out.printf("%s, %s%n", holder.uid, holder.type);
@@ -161,11 +169,10 @@ public class JournalLoad {
                                     if (uid.equals(Uid.nullUid())) { // no more data for the type
                                         break;
                                     }
-                                    // if (ATOMIC_ACTION_TYPE_NAME.endsWith(currentTypeName)) {
-                                    //     AtomicAction aa = new AtomicAction(uid);
-                                    //     supplier.accept(new UidDataHolder(currentTypeName, aa.get_uid(), aa));
                                     if (currentTypeName.contains(STATE_MANAGER_TYPE_NAME)) {
+                                        UidWrapper.setRecordWrapperTypeName(currentTypeName);
                                         supplier.accept(new UidDataHolder(currentTypeName, uid, new RecoveredTransactionWrapper(uid)));
+                                        UidWrapper.setRecordWrapperTypeName(null);
                                     } else {
                                         supplier.accept(new UidDataHolder(currentTypeName, uid));
                                     }

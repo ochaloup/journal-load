@@ -5,6 +5,7 @@ import com.arjuna.ats.arjuna.common.Uid;
 import com.arjuna.ats.arjuna.exceptions.ObjectStoreException;
 import com.arjuna.ats.arjuna.objectstore.RecoveryStore;
 import com.arjuna.ats.arjuna.objectstore.StoreManager;
+import com.arjuna.ats.arjuna.recovery.RecoveryManager;
 import com.arjuna.ats.arjuna.state.InputObjectState;
 import com.arjuna.ats.internal.arjuna.common.UidHelper;
 import com.arjuna.ats.internal.arjuna.objectstore.hornetq.HornetqJournalEnvironmentBean;
@@ -34,19 +35,30 @@ public class JournalLoad {
             throw new IllegalStateException("Provided argument of value '" + args[0] + "' is not a path to a directory");
         }
 
-
         com.arjuna.ats.arjuna.common.arjPropertyManager.getObjectStoreEnvironmentBean().setObjectStoreType(HORNETQ_OBJECT_STORE_ADAPTOR);
         com.arjuna.ats.arjuna.common.arjPropertyManager.getObjectStoreEnvironmentBean().setObjectStoreDir(objectStorePath.getAbsolutePath());
         HornetqJournalEnvironmentBean hornetQEnvBean = BeanPopulator.getDefaultInstance(HornetqJournalEnvironmentBean.class);
         hornetQEnvBean.setStoreDir(objectStorePath.getAbsolutePath());
+        // for some reason the jbossts-properties.xml setup does not work here properly
+        com.arjuna.ats.arjuna.common.recoveryPropertyManager.getRecoveryEnvironmentBean().setRecoveryActivatorClassNames(null);
+        com.arjuna.ats.arjuna.common.recoveryPropertyManager.getRecoveryEnvironmentBean().setExpiryScannerClassNames(null);
+        com.arjuna.ats.arjuna.common.recoveryPropertyManager.getRecoveryEnvironmentBean().setRecoveryModuleClassNames(null);
+
+        // to be able to load data about participant records (see com.arjuna.ats.arjuna.coordinator.abstractrecord.RecordTypeManager)
+        com.arjuna.ats.internal.jta.Implementations.initialise();
+        // com.arjuna.ats.internal.jts.Implementations.initialise();
+        // com.arjuna.ats.internal.txoj.Implementations.initialise();
 
         try {
-            StoreManager.getTxLog(); // init log
+            // setup recovery manager to be run only on demand and not as a background thread
+            RecoveryManager.manager(RecoveryManager.DIRECT_MANAGEMENT);
+
             RecoveryStore recoveryStore = StoreManager.getRecoveryStore();
             System.out.printf("Reading data from store %s:%n", objectStorePath.getAbsolutePath());
             printIds(recoveryStore, null);
         } finally {
-            StoreManager.getTxLog().stop();
+            RecoveryManager.manager().terminate();
+            StoreManager.getRecoveryStore().stop();
         }
     }
 
@@ -150,6 +162,7 @@ public class JournalLoad {
                                         AtomicAction aa = new AtomicAction(uid);
                                         aa.activate();
                                         supplier.accept(new UidDataHolder(currentTypeName, aa.get_uid(), aa));
+                                        aa.deactivate();
                                     } else {
                                         supplier.accept(new UidDataHolder(currentTypeName, uid));
                                     }

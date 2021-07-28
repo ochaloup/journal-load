@@ -33,41 +33,9 @@
     <version.artemis.journal>2.16.0</version.artemis.journal>
     <version.artemis.native>1.0.2</version.artemis.native>
     <version.netty>4.1.66.Final</version.netty>
+    <version.transaction.api>2.0.0.Final</version.transaction.api>
+    <version.jboss.transaction.spi>7.6.1.Final</version.jboss.transaction.spi>
   </properties>
-
-  <dependencies>
-    <dependency>
-      <groupId>org.jboss.narayana.jts</groupId>
-      <artifactId>narayana-jts-idlj</artifactId>
-      <version>${version.narayana}</version>
-    </dependency>
-    <!-- dependencies for ActiveMQ journal -->
-    <dependency>
-      <groupId>org.jboss.logging</groupId>
-      <artifactId>jboss-logging</artifactId>
-      <version>${version.jboss.logging}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>artemis-journal</artifactId>
-      <version>${version.artemis.journal}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>artemis-commons</artifactId>
-      <version>${version.artemis.journal}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.activemq</groupId>
-      <artifactId>activemq-artemis-native</artifactId>
-      <version>${version.artemis.native}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty-all</artifactId>
-      <version>${version.netty}</version>
-    </dependency>
-  </dependencies>
 
   <build>
     <!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
@@ -156,7 +124,7 @@
           <failsOnError>true</failsOnError>
           <includeTestSourceDirectory>true</includeTestSourceDirectory>
           <excludes>**/*$logger.java,**/*$bundle.java</excludes>
-          <useFile></useFile>
+          <useFile/>
           <!-- checkstyle is set to be run on particular modules by disabling skip -->
           <skip>${checkstyle.skip}</skip>
         </configuration>
@@ -179,4 +147,48 @@
       </plugin>
     </plugins>
   </build>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.jboss.narayana.jts</groupId>
+      <artifactId>narayana-jts-idlj</artifactId>
+      <version>${version.narayana}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jboss</groupId>
+      <artifactId>jboss-transaction-spi</artifactId>
+      <version>${version.jboss.transaction.spi}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jboss.spec.javax.transaction</groupId>
+      <artifactId>jboss-transaction-api_1.3_spec</artifactId>
+      <version>${version.transaction.api}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jboss.logging</groupId>
+      <artifactId>jboss-logging</artifactId>
+      <version>${version.jboss.logging}</version>
+    </dependency>
+    <!-- dependencies for ActiveMQ journal -->
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>artemis-journal</artifactId>
+      <version>${version.artemis.journal}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>artemis-commons</artifactId>
+      <version>${version.artemis.journal}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.activemq</groupId>
+      <artifactId>activemq-artemis-native</artifactId>
+      <version>${version.artemis.native}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-all</artifactId>
+      <version>${version.netty}</version>
+    </dependency>
+  </dependencies>
 </project>

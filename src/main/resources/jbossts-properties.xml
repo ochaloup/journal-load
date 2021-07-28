@@ -1,5 +1,11 @@
 <!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<!-- this properties seems to stop working because of properties placed in the narayana-jts dependencies -->
 <properties>
+    <!-- do not activate any additional recovery processing -->
+    <entry key="RecoveryEnvironmentBean.recoveryActivatorClassNames" />
+    <entry key="RecoveryEnvironmentBean.expiryScannerClassNames" />
+    <entry key="RecoveryEnvironmentBean.recoveryModuleClassNames" />
+    <!-- do not create default object store directory at startup at current dir -->
     <entry key="ObjectStoreEnvironmentBean.objectStoreDir">target/objectStore</entry>
     <entry key="HornetqJournalEnvironmentBean.storeDir">target/hornetObjectStore</entry>
 </properties>

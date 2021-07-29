@@ -43,14 +43,20 @@ public class JournalLoad {
         com.arjuna.ats.arjuna.common.arjPropertyManager.getObjectStoreEnvironmentBean().setObjectStoreType(HORNETQ_OBJECT_STORE_ADAPTOR);
         com.arjuna.ats.arjuna.common.arjPropertyManager.getObjectStoreEnvironmentBean().setObjectStoreDir(objectStorePath.getAbsolutePath());
 
+        // ArtemisMQ Journal setup:
         HornetqJournalEnvironmentBean hornetQEnvBean = BeanPopulator.getDefaultInstance(HornetqJournalEnvironmentBean.class);
         hornetQEnvBean.setStoreDir(objectStorePath.getAbsolutePath());
-        // hornetQEnvBean.setCompactMinFiles(1);
-        // hornetQEnvBean.setMinFiles(2);
-        // hornetQEnvBean.setCompactPercentage(99);
-
+        // the compact min files says what is the minimal number of files must exist for the compaction to start
+        hornetQEnvBean.setCompactMinFiles(1);
+        // min files defines the number of files to be pre-create on journal startup
+        hornetQEnvBean.setMinFiles(5);
+        // the compact percentage defines that there has to be less than the threshold of live data for the compaction to start
+        hornetQEnvBean.setCompactPercentage(50);
+        // when reclaiming files it will shrink back to the journal-pool-files
+        hornetQEnvBean.setPoolSize(10);
 
         // for some reason the jbossts-properties.xml setup does not work here properly
+        // need to reset all this otherwise the journal made troubles of not stopping all journal buffer threads
         com.arjuna.ats.arjuna.common.recoveryPropertyManager.getRecoveryEnvironmentBean().setRecoveryActivatorClassNames(null);
         com.arjuna.ats.arjuna.common.recoveryPropertyManager.getRecoveryEnvironmentBean().setExpiryScannerClassNames(null);
         com.arjuna.ats.arjuna.common.recoveryPropertyManager.getRecoveryEnvironmentBean().setRecoveryModuleClassNames(null);
@@ -65,9 +71,13 @@ public class JournalLoad {
             RecoveryManager.manager(RecoveryManager.DIRECT_MANAGEMENT);
 
             RecoveryStore recoveryStore = StoreManager.getRecoveryStore();
-            System.out.printf("Reading data from store %s:%n", objectStorePath.getAbsolutePath());
-            printIds(recoveryStore, null);
-            // System.out.println("Deleted: " + clearXids(recoveryStore, null));
+
+            if (Boolean.getBoolean("clear.xids")) {
+                System.out.println("Deleted: " + clearXids(recoveryStore, null));
+            } else { // just printing
+                System.out.printf("Reading data from store %s:%n", objectStorePath.getAbsolutePath());
+                printIds(recoveryStore, null);
+            }
         } finally {
             RecoveryManager.manager().terminate();
             StoreManager.getRecoveryStore().stop();

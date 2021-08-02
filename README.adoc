@@ -5,6 +5,7 @@
 [source,bash]
 ----
 mvn clean install
+mvn clean install -Dversion.narayana=5.12.1.Final-SNAPSHOT -Dversion.artemis.journal=2.18.0-SNAPSHOT
 ----
 
 == How to run

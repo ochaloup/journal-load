@@ -1,5 +1,6 @@
 package io.narayana;
 
+import com.arjuna.ats.arjuna.AtomicAction;
 import com.arjuna.ats.arjuna.StateManager;
 import com.arjuna.ats.arjuna.common.Uid;
 import com.arjuna.ats.arjuna.exceptions.ObjectStoreException;
@@ -7,6 +8,7 @@ import com.arjuna.ats.arjuna.objectstore.RecoveryStore;
 import com.arjuna.ats.arjuna.objectstore.StoreManager;
 import com.arjuna.ats.arjuna.recovery.RecoveryManager;
 import com.arjuna.ats.arjuna.state.InputObjectState;
+import com.arjuna.ats.arjuna.state.OutputObjectState;
 import com.arjuna.ats.arjuna.tools.osb.mbean.ParticipantStatus;
 import com.arjuna.ats.arjuna.tools.osb.mbean.UidWrapper;
 import com.arjuna.ats.internal.arjuna.common.UidHelper;
@@ -74,6 +76,8 @@ public class JournalLoad {
 
             if (Boolean.getBoolean("clear.xids")) {
                 System.out.println("Deleted: " + clearXids(recoveryStore, null));
+            } else if (Boolean.getBoolean("move.xids")) {
+                System.out.println("moved: " + moveXids(recoveryStore, null, new AtomicAction().type() + "/Moved"));
             } else { // just printing
                 System.out.printf("Reading data from store %s:%n", objectStorePath.getAbsolutePath());
                 printIds(recoveryStore, null);
@@ -100,6 +104,23 @@ public class JournalLoad {
             } catch (ObjectStoreException e) {
                 String errMsg = String.format("Error on removing type '%s' from recovery store '%s'. The work could be unfinished as stopped in middle of processing.",
                         objectTypes, recoveryStore);
+                throw new IllegalStateException(errMsg, e);
+            }
+        });
+        return counter.get();
+    }
+
+    static int moveXids(RecoveryStore recoveryStore, String objectTypes, String newType) {
+        final AtomicInteger counter = new AtomicInteger();
+        processIds(recoveryStore, objectTypes, uidHolder -> {
+            try {
+                InputObjectState state = recoveryStore.read_committed(uidHolder.uid, uidHolder.type);
+                recoveryStore.write_committed(uidHolder.uid, newType, new OutputObjectState(state));
+                recoveryStore.remove_committed(uidHolder.uid, uidHolder.type);
+                counter.incrementAndGet();
+            } catch (ObjectStoreException e) {
+                String errMsg = String.format("Error on moving uid types '%s' from recovery store '%s' to type '%s'.",
+                        objectTypes, recoveryStore, newType);
                 throw new IllegalStateException(errMsg, e);
             }
         });
